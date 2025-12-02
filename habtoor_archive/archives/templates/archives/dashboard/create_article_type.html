@@ -1,0 +1,64 @@
+{% extends "base_dashboard.html" %}
+{% block title %}أنواع المقالات{% endblock %}
+
+{% block content %}
+<div class="main_dashboard">
+<div class="container mt-4">
+
+    <button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createModal">
+        إضافة نوع مقال جديد
+    </button>
+
+    <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createModalLabel">إنشاء نوع مقال</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" id="articleTypeForm">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit" class="btn btn-primary w-100 mt-2">حفظ</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-3">
+        <h3>أنواع المقالات</h3>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-primary">
+                    <tr>
+                        <th>#</th>
+                        <th>الاسم بالعربي</th>
+                        <th>الاسم بالانجليزي</th>
+                        <th>تاريخ الإنشاء</th>
+                        <th>تاريخ التعديل</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in article_types %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.name_ar }}</td>
+                        <td>{{ item.name_en }}</td>
+                        <td>{{ item.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>{{ item.updated_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">لا يوجد بيانات</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+</div>
+{% endblock %}
