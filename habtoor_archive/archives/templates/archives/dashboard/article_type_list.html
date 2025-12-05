@@ -99,6 +99,28 @@
                     {% endfor %}
                 </tbody>
             </table>
+
+           <div class="pagination-container" style="display: flex; justify-content: center; gap: 5px; margin-top: 20px;">
+                {% if article_types.has_previous %}
+                    <a href="?page={{ article_types.previous_page_number }}" class="prev">« السابق</a>
+                {% else %}
+                    <span class="prev disabled">« السابق</span>
+                {% endif %}
+
+                {% for num in article_types.paginator.page_range %}
+                    {% if article_types.number == num %}
+                        <a href="#" class="current">{{ num }}</a>
+                    {% else %}
+                        <a href="?page={{ num }}">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if article_types.has_next %}
+                    <a href="?page={{ article_types.next_page_number }}" class="next">التالي »</a>
+                {% else %}
+                    <span class="next disabled">التالي »</span>
+                {% endif %}
+            </div>
         </div>
     </div>
 
