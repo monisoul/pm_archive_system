@@ -6,6 +6,7 @@ from django.db import transaction
 from .models import *
 from .forms import *
 
+
 # Create your views here.
 def login_view(request):
     if request.method == "POST":
@@ -47,69 +48,95 @@ def index(request):
 def dashboard(request):
     return render(request, 'archives/dashboard/dashboard.html')
 
-@login_required(login_url='/login/') 
-def create_article_type(request):
 
+    
+@login_required(login_url='/login/') 
+def manage_article_type(request, pk=None):
+    
     articleType = ArticleType.objects.all()
     show_modal = False
-    if (request.POST):
-        add_form = ArticleTypeForm(request.POST)
-        if (add_form.is_valid()):
-            try:
-                add_form.save()
-                messages.success(request,'تم حفظ نوع المقال بنجاح')
-                return redirect('create_article_type') 
-            except Exception as e:
-                messages.error(request, 'حدث خطأ في البيانات المدخلة. يرجى مراجعة الحقول') 
-                # print(f"Detailed Error: {e}")
-        else:
-            show_modal = True
-            #messages.error(request, 'البيانات المدخلة غير صحيحة. يرجى مراجعة الحقول.')
-            context = {'form': add_form, 'article_types': articleType , 'show_modal': show_modal}
-            return render(request, "archives/dashboard/create_article_type.html", context)            
-        
-    # معالجة طلب العرض (GET) 
-    else:
-        add_form = ArticleTypeForm()
-        
-        context = {'form': add_form, 'article_types': articleType}
-        return render(request, "archives/dashboard/create_article_type.html", context)
+    instance = None # الكائن الذي سيتم تعديله
     
-    
-@login_required(login_url='/login/')
-def update_article_type(request, pk):
-    # 1. جلب الكائن المحدد (إذا لم يوجد، سيظهر خطأ 404)
-    article_type_instance = get_object_or_404(ArticleType, id=pk)
+    # 1. تحديد وضع التعديل (Update)
+    if pk:
+        # إذا وجد PK، جلب الكائن أو إظهار خطأ 404
+        instance = get_object_or_404(ArticleType, pk=pk) 
+        
     
     if request.method == 'POST':
-        # 2. في حالة POST: ربط البيانات الجديدة مع الكائن الموجود
-        form = ArticleTypeForm(request.POST, instance=article_type_instance)
+        # 2. في POST: يتم ربط البيانات المرسلة مع الكائن (instance=instance)
+        add_form = ArticleTypeForm(request.POST, instance=instance)
         
-        if form.is_valid():
+        if add_form.is_valid():
             try:
-                # 3. الحفظ الآمن للتعديلات
                 with transaction.atomic():
-                    form.save()
+                    add_form.save()
                     
-                messages.success(request, f'تم تعديل نوع المقال "{article_type_instance.arabic_name}" بنجاح.')
-                
-                # العودة إلى صفحة القائمة الرئيسية (حيث تعرض جميع الأنواع)
-                return redirect('create_article_type')
+                # تحديد رسالة النجاح بناءً على العملية (إنشاء أو تعديل)
+                action_text = "تم تعديل" if pk else "تم إنشاء"
+                messages.success(request, f'{action_text} نوع المقال بنجاح.')
+                return redirect('list_article_types') 
                 
             except Exception as e:
-                # 4. معالجة أخطاء الحفظ (مثل القيد الفريد أو أخطاء قاعدة البيانات)
-                messages.error(request, 'حدث خطأ أثناء التعديل. يرجى مراجعة البيانات.')
-                # عند الفشل، يستمر الكود لعرض النموذج مع رسالة الخطأ
-                
-        # إذا فشل التحقق (Validation)، يستمر الكود لعرض النموذج مع أخطاء التحقق
+                messages.error(request, 'حدث خطأ غير متوقع أثناء الحفظ. يرجى مراجعة البيانات.')
+                show_modal = True # إبقاء النافذة مفتوحة عند فشل الحفظ
+                # لا يوجد هنا return، سنعرض القالب في نهاية الدالة
+                #print(e)
         
+        else:
+            # 3. في حالة فشل التحقق (Validation Error)
+            show_modal = True
+            # لا نستخدم messages.error هنا لأن الأخطاء تظهر مباشرة في حقول النموذج
+            # لا يوجد هنا return، سنعرض القالب في نهاية الدالة
+
     else:
-        # 5. في حالة GET: عرض النموذج محمل بالبيانات الحالية
-        form = ArticleTypeForm(instance=article_type_instance)
+        # 4. طلب GET:
+        #   - إذا كان هناك PK: يتم تحميل الفورم ببيانات الكائن instance
+        #   - إذا لم يكن هناك PK: يتم تحميل فورم فارغ للإنشاء
+        add_form = ArticleTypeForm(instance=instance)
         
+        # 🚨 إذا كان تعديلاً (GET مع PK)، نفتح المودل تلقائياً
+        if pk:
+            show_modal = True
+    
+    # 5. نقطة العودة الموحدة
     context = {
-        'form': form,
-        'instance': article_type_instance, # نرسل الكائن للعنوان أو معلومات أخرى
+        'form': add_form, 
+        'article_types': articleType,
+        'show_modal': show_modal,
+        # يمكن إضافة المتغير instance لمساعدة القالب على معرفة وضع التعديل
+        'instance': instance 
     }
-    # نستخدم نفس قالب إنشاء النوع في الغالب، أو قالب مخصص للتعديل
-    return render(request, "archives/dashboard/update_article_type.html", context)
+    # 🚨 يجب استخدام قالب موحد للصفحة (مثلاً: article_type_list.html)
+    return render(request, "archives/dashboard/article_type_list.html", context)
+
+from django.shortcuts import redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db import transaction
+
+# ... (استيراد ArticleType)
+
+@login_required(login_url='/login/')
+def delete_article_type(request, pk):
+    article_type_instance = get_object_or_404(ArticleType, pk=pk)
+    
+    # 2. التأكد من أن الطلب هو POST للحذف الآمن (مهم جداً)
+    # لا ينبغي أبداً السماح بالحذف عبر طلب GET
+    if request.method == 'POST':
+        try:
+            name = article_type_instance.name_ar # لحفظ الاسم قبل الحذف للرسالة
+            
+            # 3. حذف الكائن
+            with transaction.atomic():
+                article_type_instance.delete()
+                
+            messages.success(request, f'تم حذف نوع المقال "{name}" بنجاح.')
+            
+        except Exception as e:
+            messages.error(request, 'حدث خطأ أثناء محاولة الحذف. يرجى التأكد من عدم ارتباطه بعناصر أخرى.')
+            
+    return redirect('list_article_types')
+    
+    
+   

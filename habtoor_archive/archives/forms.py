@@ -15,6 +15,11 @@ class ArticleTypeForm(forms.ModelForm):
     class Meta:
         model = ArticleType
         fields = ['name_ar', 'name_en']
+        labels = {
+            'name_ar': 'الاسم بالعربي',
+            'name_en': 'الاسم بالانجليزي',
+            
+        }
         widgets = {
             'name_ar' : forms.TextInput(attrs={'class':'form-control' , 'placeholder':'أدخل اسم النوع'}),
             'name_en' : forms.TextInput(attrs={'class':'form-control' , 'placeholder':'أدخل اسم النوع بالانجليزي'}),
