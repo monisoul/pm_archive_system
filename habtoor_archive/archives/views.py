@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.db import transaction
 from .models import *
 from .forms import *
+from django.core.paginator import Paginator
 
 
 # Create your views here.
@@ -98,14 +99,21 @@ def manage_article_type(request, pk=None):
         # 🚨 إذا كان تعديلاً (GET مع PK)، نفتح المودل تلقائياً
         if pk:
             show_modal = True
+
+            # pagination
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(articleType, 10)
+    page_obj = paginator.get_page(page_number)
     
     # 5. نقطة العودة الموحدة
     context = {
         'form': add_form, 
-        'article_types': articleType,
+        'article_types': page_obj,
         'show_modal': show_modal,
         # يمكن إضافة المتغير instance لمساعدة القالب على معرفة وضع التعديل
-        'instance': instance 
+        'instance': instance ,
+        'paginator': paginator,    
+        'page_number': page_number
     }
     # 🚨 يجب استخدام قالب موحد للصفحة (مثلاً: article_type_list.html)
     return render(request, "archives/dashboard/article_type_list.html", context)
