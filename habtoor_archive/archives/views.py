@@ -48,33 +48,80 @@ def dashboard(request):
     return render(request, 'archives/dashboard/dashboard.html')
 
 @login_required(login_url='/login/') 
-def create_article_type(request):
+def create_article_type(request, id=None):
 
-    articleType = ArticleType.objects.all()
+    # جلب جميع أنواع المقالات لعرضها في الجدول
+    article_types = ArticleType.objects.all()
+
+    # إذا كنا في وضع التعديل، نجلب السجل حسب الـ id
+    instance = ArticleType.objects.filter(id=id).first() if id else None
+
+    # المتغير المسؤول عن فتح المودال تلقائيًا
     show_modal = False
-    if (request.POST):
-        add_form = ArticleTypeForm(request.POST)
-        if (add_form.is_valid()):
+
+    if request.method == "POST":
+
+        # تعبئة النموذج مع ربطه بالـ instance إذا كان تعديل
+        add_form = ArticleTypeForm(request.POST, instance=instance)
+
+        # إذا كان النموذج صالحًا
+        if add_form.is_valid():
             try:
+                # الحفظ في قاعدة البيانات
                 add_form.save()
-                messages.success(request,'تم حفظ نوع المقال بنجاح')
-                return redirect('create_article_type') 
+
+                # رسالة نجاح
+                if instance:
+                    messages.success(request, "تم تعديل نوع المقال بنجاح")
+                else:
+                    messages.success(request, "تم حفظ نوع المقال بنجاح")
+
+                # بعد الحفظ نعيد التوجيه لمنع إعادة إرسال البيانات
+                return redirect('create_article_type')
+
             except Exception as e:
+                # في حالة وجود خطأ من قاعدة البيانات
                 messages.error(request, 'حدث خطأ في البيانات المدخلة. يرجى مراجعة الحقول') 
                 # print(f"Detailed Error: {e}")
+
         else:
-            show_modal = True
-            #messages.error(request, 'البيانات المدخلة غير صحيحة. يرجى مراجعة الحقول.')
-            context = {'form': add_form, 'article_types': articleType , 'show_modal': show_modal}
-            return render(request, "archives/dashboard/create_article_type.html", context)            
-        
-    # معالجة طلب العرض (GET) 
+            # إذا كان تعديل → افتح المودال
+            if instance:
+                show_modal = True
+            # إذا كان إضافة → افتح المودال
+            else:
+                show_modal = True
+
+            context = {
+                'form': add_form,                # النموذج الذي يحتوي الأخطاء
+                'article_types': article_types,  # لعرض السجلات
+                'show_modal': show_modal,        # لفتح المودال تلقائيًا
+                'is_edit': True if instance else False,   # وضع تعديل أو إضافة
+                'edit_id': id                    # رقم السجل الجاري تعديله
+            }
+
+            return render(request, "archives/dashboard/create_article_type.html", context)
+
     else:
-        add_form = ArticleTypeForm()
-        
-        context = {'form': add_form, 'article_types': articleType}
+
+        # إذا كان هناك id → هذا يعني أننا نفتح صفحة التعديل
+        if instance:
+            add_form = ArticleTypeForm(instance=instance)
+            show_modal = True   # فتح المودال تلقائيًا عند التعديل
+        else:
+            # حالة الإضافة
+            add_form = ArticleTypeForm()
+
+        context = {
+            'form': add_form,
+            'article_types': article_types,
+            'show_modal': show_modal,        # لفتح المودال عند التعديل
+            'is_edit': True if instance else False,
+            'edit_id': id
+        }
+
         return render(request, "archives/dashboard/create_article_type.html", context)
-    
+
     
 @login_required(login_url='/login/')
 def update_article_type(request, pk):
@@ -113,3 +160,19 @@ def update_article_type(request, pk):
     }
     # نستخدم نفس قالب إنشاء النوع في الغالب، أو قالب مخصص للتعديل
     return render(request, "archives/dashboard/update_article_type.html", context)
+
+@login_required(login_url='/login/')
+def delete_article_type(request, id):
+    try:
+        item = ArticleType.objects.get(id=id)
+    except ArticleType.DoesNotExist:
+        messages.error(request, "العنصر غير موجود.")
+        return redirect('create_article_type')
+
+    if request.method == "POST":
+        item.delete()
+        messages.success(request, "تم حذف نوع المقال بنجاح.")
+        return redirect('create_article_type')
+
+    messages.error(request, "طلب غير صالح.")
+    return redirect('create_article_type')
