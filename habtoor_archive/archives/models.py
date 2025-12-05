@@ -1,11 +1,24 @@
 from django.db import models
+from django.core.validators import RegexValidator # لاستخدام التعبيرات القياسية
 from django.contrib.auth.models import User
 
 # Create your models here.
 
+# يمنع الأرقام ويسمح فقط بالحروف العربية والمسافات
+arabic_chars_only = RegexValidator(
+    r'^[\u0600-\u06FF\s]+$', # التعبير القياسي للحروف العربية والمسافات
+    'يجب أن يحتوي الاسم على حروف عربية ومسافات فقط.',
+)
+
+# يمنع الأرقام ويسمح فقط بالحروف الإنجليزية (كبيرة وصغيرة) والمسافات
+english_chars_only = RegexValidator(
+    r'^[a-zA-Z\s]+$', # التعبير القياسي للحروف الإنجليزية والمسافات
+    'يجب أن يحتوي الاسم على حروف إنجليزية ومسافات فقط.',
+)
+
 class ArticleType(models.Model):
-    name_ar = models.CharField(max_length=191 , unique=True)
-    name_en = models.CharField(max_length=191  , null=True , blank=True)
+    name_ar = models.CharField(max_length=191 ,validators=[arabic_chars_only], unique=True)
+    name_en = models.CharField(max_length=191 ,validators=[english_chars_only] , null=True , blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

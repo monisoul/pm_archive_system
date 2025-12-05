@@ -22,8 +22,8 @@ class ArticleTypeForm(forms.ModelForm):
         }
         error_messages = {
             'name_ar': {
-                'required': 'يرجى إدخال اسم المحافظة.',        # Required
-                'unique': 'اسم المحافظة هذا موجود بالفعل.',   # Unique
+                'required': 'يرجى إدخال اسم نوع المقال.',        # Required
+                'unique': 'اسم النوع هذا موجود بالفعل.',   # Unique
                 'max_length': 'اسم المحافظة طويل جدًا، الحد الأقصى 100 حرف.'  # Max length
             }
         }

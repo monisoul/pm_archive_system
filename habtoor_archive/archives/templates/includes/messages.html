@@ -1,0 +1,43 @@
+{% if messages %}
+<style>
+    /* تنسيق الرسائل بشكل عام */
+    .django-messages {
+        list-style: none; /* إزالة النقاط الجانبية */
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+        font-weight: bold;
+        text-align: right; /* لمحاذاة النص لليمين */
+    }
+    
+    /* 🟢 تنسيق رسائل النجاح (success) */
+    .success {
+        background-color: #d4edda; /* خلفية خضراء فاتحة */
+        color: #155724; /* خط أخضر داكن */
+        border: 1px solid #c3e6cb;
+    }
+
+    /* 🔴 تنسيق رسائل الخطأ (error) */
+    .error {
+        background-color: #f8d7da; /* خلفية حمراء فاتحة */
+        color: #721c24; /* خط أحمر داكن */
+        border: 1px solid #f5c6cb;
+    }
+    
+    /* 🟡 تنسيق رسائل التحذير (warning - مفيد لإضافته) */
+    .warning {
+        background-color: #fff3cd; 
+        color: #856404; 
+        border: 1px solid #ffeeba;
+    }
+
+</style>
+
+<ul class="django-messages">
+    {% for message in messages %}
+    <li class="{% if message.tags %}{{ message.tags }}{% else %}info{% endif %}">
+        {{ message }}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
