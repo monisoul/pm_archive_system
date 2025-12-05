@@ -10,28 +10,31 @@
     </button>
     {% include 'includes/messages.html' %}
 
-    <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="createModalLabel">إنشاء نوع مقال</h5>
-                    <button type="button" style="margin-right: auto; margin-left: 0 !important;" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form method="POST" id="articleTypeForm">
-                        {% csrf_token %}
+    <div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
 
-                        {% if form.non_field_errors %}
-                            <div class="error">{{ form.non_field_errors }}</div>
-                        {% endif %}
-
-                        {{ form.as_p }}
-                        <button type="submit" class="btn btn-primary w-100 mt-2">حفظ</button>
-                    </form>
-                </div>
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    {% if is_edit %} تعديل نوع المقال {% else %} إضافة نوع مقال {% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+
+            <div class="modal-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+
+                    <button type="submit" class="btn btn-primary w-100 mt-2">
+                        {% if is_edit %} تحديث {% else %} حفظ {% endif %}
+                    </button>
+                </form>
+            </div>
+
         </div>
     </div>
+</div>
 
     <div class="card p-3">
         <h3>أنواع المقالات</h3>
@@ -57,7 +60,21 @@
                         <td>{{ item.created_at|date:"Y-m-d H:i" }}</td>
                         <td>{{ item.updated_at|date:"Y-m-d H:i" }}</td>
                         <td>
-                        <a href="{% url 'update_article_type' pk=item.pk %}" class="btn btn-sm btn-info">تعديل</a>
+                        <a href="{% url 'edit_article_type' item.id %}" 
+                        class="btn btn-warning btn-sm open-edit-modal">
+                        تعديل
+                        </a>
+                       <form method="POST" action="{% url 'delete_article_type' item.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm" 
+                                    onclick="return confirm('هل أنت متأكد أنك تريد الحذف؟');">
+                                حذف
+                            </button>
+                        </form>
+
+
+
+
                         </td>
                     </tr>
                     {% empty %}
@@ -74,6 +91,14 @@
 </div>
 
 {% endblock %}
+
+{% if show_modal %}
+<script>
+var myModal = new bootstrap.Modal(document.getElementById('createModal'), {});
+myModal.show();
+</script>
+{% endif %}
+
 
 
 
