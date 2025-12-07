@@ -59,6 +59,18 @@
     <div class="card p-3">
         <h3>أنواع المقالات</h3>
         <div class="table-responsive">
+            <form>
+                <div style="display: flex;">
+                    <input  placeholder="Name" type="text" name="name" value="{{request.GET.name}}" class="form-control w-50 m-2" style="margin-bottom: 50px !important">
+                     <button type="submit" class="btn btn-primary w-30">
+                        بحث 
+                    </button>
+                    <button  class="btn btn-primary w-30" >
+                        <a href="{% url 'list_article_types' %}">
+                        clear filters</a> 
+                    </button>
+                </div>
+            </form>
             <table class="table table-bordered table-striped">
                 <thead class="table-primary">
                     <tr>

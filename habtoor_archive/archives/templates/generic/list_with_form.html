@@ -1,0 +1,82 @@
+{% extends "base_dashboard.html" %}
+{% load custom_tags %}
+
+{% block title %} المقالات{% endblock %}
+
+{% block content %}
+
+<h1>{{ model_name_plural }}</h1>
+
+
+<div class="main_dashboard">
+   <div class="container mt-4">
+       <button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createModal" >
+        إضافة نوع مقال جديد
+       </button>
+        <div class="table-responsive">
+          
+
+<form method="get" style="margin-bottom:20px;">
+    <input type="text" name="search" placeholder="ابحث هنا" value="{{ request.GET.search }}">
+  
+    <button type="submit">بحث</button>
+</form>
+
+
+<!-- قائمة العناصر -->
+<h2>قائمة {{ model_name_plural }}</h2>
+<table class="table table-bordered table-striped">
+            
+    <tr>
+        {% for  field in model_fields %}
+            <th>{{ field.verbose_name }}</th>
+        {% endfor %}
+        <th>تعديل</th>
+        <th>حذف</th>
+    </tr>
+    {% for obj in objects_list %}
+    <tr>
+        {% for  field in model_fields %}
+            <td>{{ obj|attr:field.name }}</td>
+        {% endfor %}
+        <td><a href="{% url model_name|add:'-update' obj.id %}">تعديل</a></td>
+        <td><a href="{% url model_name|add:'-delete' obj.id %}">حذف</a></td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% include "includes/pagination.html" %}
+
+ </div>
+
+</div>
+</div>
+
+  <!-- فورم الإضافة -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createModalLabel">
+                    إضافة {{ model_name_singular }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form method="post" action="{% url model_name|add:'-create' %}"> 
+                {% csrf_token %}
+                
+                <div class="modal-body">
+                    {{ form.as_p }} 
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                </div>
+            </form>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
