@@ -42,8 +42,8 @@
 
  {% include "includes/messages.html" %} 
 
+  {% include "archives/dashboard/includes/header.html" %}
   {% block content %}
-  {% include "archives/dashboard/includes/footer.html" %}
   {% endblock %}
 
   {% include "archives/dashboard/includes/footer.html" %} 
@@ -66,7 +66,6 @@
 
   {% block extra_js %}
   <script> 
-      // هذا المتغير يجب أن يُمرر من الـ View لفتح الـ Modal
       var shouldShowModal = "{{ show_modal }}"; 
       
       if (shouldShowModal === "True") {   

@@ -4,29 +4,36 @@
 {% block title %} تعديل {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    
+<div class="main_dashboard">
+
+<div class="container mt-5">
+
     {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            {% endfor %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
+        {% endfor %}
+    </div>
     {% endif %}
 
-    <h1 class="mb-4">
-        {% if operation == 'Update' %}
-            {% translate "تعديل" %}
-        {% else %}
-            {% translate "اضافة" %}
-        {% endif %}
-        {{ model_name_singular }}
-    </h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title mb-0">
+            {% if operation == 'Update' %}
+                {% translate "تعديل" %}
+            {% else %}
+                {% translate "إضافة" %}
+            {% endif %}
+            {{ model_name_singular }}
+        </h1>
+        <a href="{% url model_name|add:'-list' %}" class="btn btn-secondary">
+            &larr; {% translate "العودة للقائمة" %}
+        </a>
+    </div>
 
-    <div class="card p-4">
+    <div class="card shadow-sm p-4">
         <form method="post" enctype="multipart/form-data"> 
             {% csrf_token %}
 
@@ -35,13 +42,60 @@
             <hr>
             <div class="d-flex justify-content-start gap-2">
                 <button type="submit" class="btn btn-primary">
-                    {% translate "Save Changes" %}
+                    {% translate "حفظ التغييرات" %}
                 </button>
-                <a href="{% url model_name|add:'-list' %}" class="btn btn-secondary">
-                    {% translate "Cancel" %}
+                <a href="{% url model_name|add:'-list' %}" class="btn btn-outline-secondary">
+                    {% translate "إلغاء" %}
                 </a>
             </div>
         </form>
     </div>
+
 </div>
+</div>
+
+<style>
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0d6efd;
+    border-bottom: 3px solid #0d6efd;
+    padding-bottom: 0.3rem;
+}
+
+.card {
+    border-radius: 10px;
+    background-color: #ffffff;
+}
+
+form p {
+    margin-bottom: 1rem;
+}
+
+.btn-primary, .btn-outline-secondary {
+    min-width: 130px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.messages .alert {
+    font-size: 0.95rem;
+}
+
+.card:hover {
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 1.5rem;
+    }
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+    }
+}
+</style>
 {% endblock %}
