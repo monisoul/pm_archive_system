@@ -40,9 +40,10 @@
 <body class="index-page">
 
 
- {% include "archives/dashboard/includes/header.html" %} 
+ {% include "includes/messages.html" %} 
 
   {% block content %}
+  {% include "archives/dashboard/includes/footer.html" %}
   {% endblock %}
 
   {% include "archives/dashboard/includes/footer.html" %} 
@@ -64,18 +65,14 @@
   <script src="{% static 'archives/assets/js/main.js' %}"></script>
 
   {% block extra_js %}
-  <script>
-      // 🚨 التحقق من المتغير الذي تم تمريره من Django
+  <script> 
       // هذا المتغير يجب أن يُمرر من الـ View لفتح الـ Modal
       var shouldShowModal = "{{ show_modal }}"; 
       
-      // إذا كان المتغير 'show_modal' يساوي True، نفتح النافذة المنبثقة
-      if (shouldShowModal === "True") {
-          // نحدد الـ Modal الذي يجب فتحه (في حالتك هو createModal)
+      if (shouldShowModal === "True") {   
           var createModalElement = document.getElementById('createModal');
           
           if (createModalElement) {
-              // نستخدم دالة Bootstrap لفتح الـ Modal
               var modal = new bootstrap.Modal(createModalElement);
               modal.show();
           } 
