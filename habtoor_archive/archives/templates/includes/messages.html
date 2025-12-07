@@ -68,7 +68,7 @@
     content: "ℹ️";
 }
 </style>
-
+<div class="main_dashboard">
 <ul class="django-messages">
     {% for message in messages %}
     <li class="{% if message.tags %}{{ message.tags }}{% else %}info{% endif %}">
@@ -76,4 +76,5 @@
     </li>
     {% endfor %}
 </ul>
+</div>
 {% endif %}

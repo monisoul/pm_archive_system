@@ -76,7 +76,6 @@ class BaseListView(ListView):
         
         return queryset
 
-    # يجب تعريف model و form_class في كل subclass
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
@@ -84,19 +83,16 @@ class BaseListView(ListView):
             if 'form' not in context:
                 context['form'] = self.form_class() 
         
-        #  الحل: استخراج الأسماء الوصفية وتمريرها للسياق
         if self.model:
             context['model_name_singular'] = self.model._meta.verbose_name
             context['model_name_plural'] = self.model._meta.verbose_name_plural
             
             
-            #  الحل: تمرير اسم النموذج الآمن لاستخدامه في تكوين الروابط 
             context['model_name'] = self.model._meta.model_name
             
             
             display_fields = []
             for field in self.model._meta.fields:
-                # يمكنك إضافة شروط هنا لاستبعاد حقول معينة (مثل 'id')
                 display_fields.append(field)
             
             context['model_fields'] = display_fields
@@ -104,23 +100,17 @@ class BaseListView(ListView):
         return context
     
 class BaseCreateView(CreateView):
-    # لا تحتاج لـ template_name لأننا لن نستخدمها لعرض الصفحة، بل لمعالجة POST
-    # يجب تعريف model و form_class و success_url في كل subclass
 
     def get_success_url(self):
-        # للتأكد من استخدام success_url المعرّف في الـ subclass
         if self.success_url:
             return self.success_url
-        # في حال عدم تعريفه، يمكن أن يعود إلى الصفحة الرئيسية
         return reverse_lazy('dashboard') 
         
     def form_valid(self, form):
-        # إضافة رسالة نجاح عند الإنشاء
         messages.success(self.request, f'تم إضافة {self.model._meta.verbose_name} بنجاح.')
         return super().form_valid(form)
 
     def form_invalid(self, form):
-        # إذا كان الفورم غير صالح، نعيد التوجيه إلى صفحة القائمة مع إظهار المودل
         messages.error(self.request, 'فشل في الإضافة. يرجى مراجعة الأخطاء.')
         
         return redirect(self.get_success_url())
@@ -132,24 +122,20 @@ class BaseUpdateView(UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        # تمرير الأسماء الوصفية ونوع العملية
         if self.model:
             context['model_name_singular'] = self.model._meta.verbose_name
             context['model_name_plural'] = self.model._meta.verbose_name_plural
-            context['operation'] = 'Update'  # لتسهيل التمييز في القالب
+            context['operation'] = 'Update' 
             
-            #  الحل: تمرير اسم النموذج (model_name) لتكوين الروابط 
             context['model_name'] = self.model._meta.model_name
             
         return context
     
     def form_valid(self, form):
-        #اضافة رسالة نجاح
         messages.success(self.request, f'تم تعديل {self.model._meta.verbose_name} بنجاح.')
         return super().form_valid(form)
 
     def form_invalid(self, form):
-        # في حال فشل التحقق، نرجع لصفحة التعديل نفسها مع ظهور الأخطاء
         messages.error(self.request, 'فشل التعديل. يرجى مراجعة الأخطاء في النموذج.')
         return super().form_invalid(form)
     
@@ -162,21 +148,17 @@ class BaseDeleteView(DeleteView):
         context = super().get_context_data(**kwargs)
         
         if self.model:
-            # 🚨 تمرير الأسماء الوصفية 🚨
             context['model_name_singular'] = self.model._meta.verbose_name
             context['model_name_plural'] = self.model._meta.verbose_name_plural
-            # 🚨 تمرير اسم النموذج (لروابط الإلغاء/العودة) 🚨
             context['model_name'] = self.model._meta.model_name
             
         return context
     
     def form_valid(self, form):
-        # 🚨 إضافة رسالة نجاح بعد الحذف 🚨
-        name_of_object = self.object # الكائن الذي سيتم حذفه
+        name_of_object = self.object 
         model_name = self.model._meta.verbose_name
         
         try:
-            # يمكن تخصيص رسالة النجاح حسب الحقل، نفترض وجود حقل 'name'
             display_name = getattr(name_of_object, 'name', str(name_of_object))
             messages.success(self.request, f'تم حذف {model_name} "{display_name}" بنجاح.')
         except Exception:
@@ -208,7 +190,6 @@ class ArticleTypeDeleteView(BaseDeleteView):
     
 
 
-#صفحة مراحل المسارات المهنية
 class CareerStageListView(BaseListView):
     model = CareerStage
     form_class = CareerStageForm

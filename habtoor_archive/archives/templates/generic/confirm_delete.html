@@ -5,7 +5,8 @@
 {% block title %} تأكيد حذف {% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="main_dashboard">
+<div class="container mt-5" style="width: 50%;">
     
     <div class="card p-5 shadow-sm border-danger">
         <h1 class="card-title text-danger mb-4">
@@ -25,14 +26,15 @@
             
             <div class="d-flex gap-3">
                 <button type="submit" class="btn btn-danger btn-lg">
-                    {% translate "Yes, Delete Permanently" %}
+                    تأكيد الحذف
                 </button>
                 
                 <a href="{% url model_name|add:'-list' %}" class="btn btn-secondary btn-lg">
-                    {% translate "Cancel" %}
+                    إلغاء
                 </a>
             </div>
         </form>
     </div>
+</div>
 </div>
 {% endblock %}
