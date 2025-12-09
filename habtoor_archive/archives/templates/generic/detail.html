@@ -1,0 +1,71 @@
+{% extends "base_dashboard.html" %}
+
+{% block title %} تفاصيل {{ model_name_singular }} {% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title mb-0">
+            تفاصيل {{ model_name_singular }}: 
+            {{ item }} 
+        </h1>
+
+        <a href="{% url model_name|add:'-list' %}" class="btn btn-secondary">
+            &larr; العودة للقائمة
+        </a>
+    </div>
+
+    <div class="card shadow-sm p-4">
+        
+        <h2>المعلومات الأساسية</h2>
+        <hr>
+        
+        <dl class="row">
+            {% for field in fields_data %}
+                <dt class="col-sm-3">{{ field.label }}:</dt>
+                <dd class="col-sm-9">{{ field.value|default:"غير متوفر" }}</dd>
+            {% endfor %}
+        </dl>
+
+        {% if attachments %}
+            <h2 class="mt-4">📁 المرفقات المرتبطة</h2>
+            <hr>
+            {% if attachments.count %}
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>اسم الملف</th>
+                            <th>الرابط/المسار</th>
+                            <th>قابل للمشاركة؟</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attachment in attachments %}
+                            <tr>
+                                <td>{{ attachment.original_name|default:attachment.file.name }}</td>
+                                <td>
+                                    {% if attachment.is_url %}
+                                        <a href="{{ attachment.file }}" target="_blank">رابط خارجي</a>
+                                    {% else %}
+                                        <a href="{{ attachment.file.url }}" target="_blank">تحميل الملف</a>
+                                    {% endif %}
+                                </td>
+                                <td>{% if attachment.can_be_shared %}نعم{% else %}لا{% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="alert alert-info">لا توجد مرفقات لهذا الكائن.</p>
+            {% endif %}
+        {% endif %}
+
+        <div class="mt-4 d-flex gap-2">
+            <a href="{% url model_name|add:'-update' pk=item.pk %}" class="btn btn-warning">تعديل</a>
+            <a href="{% url model_name|add:'-delete' pk=item.pk %}" class="btn btn-danger">حذف</a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
