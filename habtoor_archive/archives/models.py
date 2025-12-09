@@ -1,6 +1,12 @@
 from django.db import models
 from django.core.validators import RegexValidator # لاستخدام التعبيرات القياسية
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+import os
+import uuid
+from django.utils import timezone
+from django.contrib.contenttypes.fields import GenericRelation
 
 # Create your models here.
 
@@ -75,11 +81,9 @@ class Governorate(models.Model):
 
     def __str__(self):
         return self.name
-    
-    
-    
+ 
 class Article(models.Model):
-    title_ar = models.CharField(max_length=191 , unique=True , verbose_name="عنوان المقال")
+    title_ar = models.CharField(max_length=191  , verbose_name="عنوان المقال")
     title_en = models.CharField(max_length=191)
     content = models.TextField(verbose_name="محتوى المقال")
     Authority = models.ForeignKey(Authority , on_delete=models.SET_NULL , null=True , blank= True , verbose_name="الجهة")
@@ -106,6 +110,8 @@ class Article(models.Model):
     created_at = models.DateTimeField(auto_now_add=True , verbose_name="تاريخ الانشاء")
     updated_at = models.DateTimeField(auto_now=True , verbose_name="تاريخ آخر تعديل")
     
+    attachments = GenericRelation('Attachment', related_query_name='article')
+    
     class Meta:
         verbose_name = 'المقالة'
         verbose_name_plural = 'المقالات'
@@ -114,18 +120,66 @@ class Article(models.Model):
         return self.title_ar
     
     
+def attachment_upload_path(instance, filename):
+    """
+    تحديد مسار رفع الملف بناءً على اسم الجدول المرتبط
+    وتبسيط اسم الملف المحفوظ ليكون فريدًا وقصيرًا.
+    """
+    
+    # 1. تحديد اسم النموذج و التأكد من أن الكائن مرتبط (لضمان المسار)
+    model_name = instance.content_object._meta.model_name if instance.content_object else 'temp_attachments'
+    safe_model_name = model_name.lower().replace('-', '_')
+
+    # 2. تحديد مجلد التاريخ
+    current_date = timezone.now().strftime('%Y/%m/%d')
+
+    # 3. فصل الامتداد وتوليد اسم ملف جديد وقصير
+    
+    # الحصول على الامتداد (مثل '.png', '.pdf')
+    name, ext = os.path.splitext(filename)
+    
+    # توليد معرّف فريد (UUID) لاسم الملف
+    unique_filename = f"{uuid.uuid4().hex[:10]}{ext}" # استخدام جزء من UUID + الامتداد
+
+    # إذا كان الكائن الأم محفوظاً بالفعل، نستخدم ID الكائن للحفظ النهائي
+    if instance.content_object and instance.content_object.pk:
+        # إذا تم الحفظ، نستخدم PK كجزء من الاسم لزيادة الوضوح
+        unique_filename = f"{instance.content_object.pk}_{uuid.uuid4().hex[:8]}{ext}"
+    
+    # 4. بناء المسار النهائي
+    # المسار: attachments/اسم_النموذج/السنة/الشهر/اليوم/اسم_الملف_الفريد.ext
+    final_path = os.path.join(
+        f'attachments/{safe_model_name}/{current_date}', 
+        unique_filename
+    )
+    
+    return final_path
+
 class Attachment(models.Model):
-    file_name = models.CharField(max_length=191 , null=True , blank= True , unique=True , verbose_name="اسم الملف")
-    file_original_name = models.CharField(max_length=191 , null=True , blank= True , unique=True , verbose_name="اسم الملف الاصلي")
-    source_table = models.CharField(max_length=191 , null=True , blank= True , verbose_name="الجدول")
-    source_type =  models.CharField(max_length=191 , null=True , blank= True , verbose_name="نوع المصدر" )
-    source_id = models.BigIntegerField( verbose_name="رقم المصدر")
-    file_path = models.CharField(max_length=191 , verbose_name="مسار الملف")
-    file_extension = models.CharField(max_length=191 , null=True , blank= True , verbose_name="امتداد الملف")
-    is_url = models.BooleanField(default=False , verbose_name="مسار خارجي")
-    can_be_shared = models.BooleanField(default=True , verbose_name="هل ممكن مشاركته") 
-    file_size = models.DecimalField(max_digits=10, decimal_places=2 , verbose_name="حجم الملف")
-    created_by = models.ForeignKey(User , on_delete=models.CASCADE, verbose_name="أُنشى بواسطة")
+    #  1. الحقول العامة للمفاتيح الخارجية (Generic Foreign Key)
+    # لتحديد الجدول الذي ينتمي إليه المرفق (Article, Interview, etc.)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    # لتخزين رقم الكائن (ID) المرتبط في الجدول المحدد
+    object_id = models.PositiveIntegerField(verbose_name="رقم المصدر")
+    # الحقل الذي يجمع بين content_type و object_id للوصول إلى الكائن مباشرة
+    content_object = GenericForeignKey('content_type', 'object_id' )
+    
+    
+    #  2. حقل الملف 
+    file = models.FileField(
+        upload_to=attachment_upload_path, 
+        max_length=191,
+        verbose_name="الملف/المرفق",
+        blank=True,
+        null=True
+    )
+    original_name = models.CharField(max_length=255, blank=True  , null=True )
+    
+    #  3. الحقول الوصفية (نحتفظ بها كما هي) 
+    is_url = models.BooleanField(default=False, verbose_name="مسار خارجي (رابط)")
+    can_be_shared = models.BooleanField(default=True, verbose_name="هل ممكن مشاركته") 
+    
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="أُنشى بواسطة")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الانشاء")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاريخ آخر تعديل")
     
@@ -134,4 +188,4 @@ class Attachment(models.Model):
         verbose_name_plural = 'المرفقات'
     
     def __str__(self):
-        return self.file_name
+        return self.file.name

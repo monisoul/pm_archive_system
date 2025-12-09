@@ -1,0 +1,36 @@
+{% block content %}
+<div class="container mt-4">
+    <div class="card p-4">
+        
+        <form method="post" enctype="multipart/form-data"> 
+            {% csrf_token %}
+
+            <h3 class="mb-3 text-primary">المعلومات الأساسية للمقالة</h3>
+            
+            <div class="row">
+                {{ form.as_p }} 
+                </div>
+            
+            <hr class="my-5">
+
+            {% if attachment_formset %}
+            <h3 class="mb-3 text-info">المرفقات (اختياري)</h3>
+            
+            <div class="alert alert-info">
+                يمكنك إضافة مرفقات هنا. إذا لم تقم بإضافة ملف، سيتم تجاهل هذا الجزء.
+            </div>
+
+            {{ attachment_formset.management_form }} 
+
+            <table class="table table-bordered table-sm table-striped">
+                </table>
+            
+            {% else %}
+                <div class="alert alert-warning">لا يوجد نموذج مرفقات لهذا النوع من الإنشاء.</div>
+            {% endif %}
+
+            <hr>
+            </form>
+    </div>
+</div>
+{% endblock %}
