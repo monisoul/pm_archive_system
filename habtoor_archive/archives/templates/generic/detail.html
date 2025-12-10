@@ -3,7 +3,10 @@
 {% block title %} تفاصيل {{ model_name_singular }} {% endblock %}
 
 {% block content %}
+<div class="main_dashboard">
+
 <div class="container mt-5">
+
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="page-title mb-0">
@@ -67,5 +70,50 @@
         </div>
     </div>
 </div>
+
+<style>
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0d6efd;
+    border-bottom: 3px solid #0d6efd;
+    padding-bottom: 0.3rem;
+}
+
+.card {
+    border-radius: 10px;
+    background-color: #ffffff;
+}
+
+form p {
+    margin-bottom: 1rem;
+}
+
+.btn-primary, .btn-outline-secondary {
+    min-width: 130px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.messages .alert {
+    font-size: 0.95rem;
+}
+
+.card:hover {
+    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 1.5rem;
+    }
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+    }
+}
+</style>
 
 {% endblock %}
