@@ -14,9 +14,15 @@
             {{ item }} 
         </h1>
 
-        <a href="{% url model_name|add:'-list' %}" class="btn btn-secondary">
-            &larr; العودة للقائمة
-        </a>
+        {% if model_name %}
+            <a href="{% url model_name|add:'-list' %}" class="btn btn-secondary">
+                &larr; العودة للقائمة
+            </a>
+        {% else %}
+             <a href="#" class="btn btn-secondary">
+                &larr; العودة
+            </a>
+        {% endif %}
     </div>
 
     <div class="card shadow-sm p-4">
@@ -27,7 +33,7 @@
         <dl class="row">
             {% for field in fields_data %}
                 <dt class="col-sm-3">{{ field.label }}:</dt>
-                <dd class="col-sm-9">{{ field.value|default:"غير متوفر" }}</dd>
+                <dd class="col-sm-9">{{ field.value|safe|default:"غير متوفر" }}</dd>
             {% endfor %}
         </dl>
 
@@ -64,14 +70,100 @@
             {% endif %}
         {% endif %}
 
+
+       {% if publications %}
+    <h2 class="mt-4">أماكن النشر المرتبطة</h2>
+    <hr>
+    {% for pub in publications %}
+        <div class="card mb-3 p-3 shadow-sm">
+            <h5 class="text-primary">
+                {% if pub.platform %}
+                    <li><strong>المنصة:</strong> {{ pub.platform.name_ar }}</li>
+                {% else %}
+                    <li><strong>المنصة:</strong> منصة غير محددة</li>
+                {% endif %}
+            </h5>
+
+            <ul class="nested-details">
+                {% if pub.book_title %}
+                    <li><strong>اسم الكتاب:</strong> {{ pub.book_title }}</li>
+                {% endif %}
+
+                {% if pub.publish_date %}
+                    <li><strong>تاريخ النشر:</strong> {{ pub.publish_date }}</li>
+                {% endif %}
+
+                {% if pub.page_number %}
+                    <li><strong>رقم الصفحة:</strong> {{ pub.page_number }}</li>
+                {% endif %}
+
+                {% if pub.issue_number %}
+                    <li><strong>العدد:</strong> {{ pub.issue_number }}</li>
+                {% endif %}
+
+                {% if pub.issue_date %}
+                    <li><strong>تاريخ الصحيفة:</strong> {{ pub.issue_date }}</li>
+                {% endif %}
+
+                {% if pub.website_url %}
+                    <li><strong>رابط الموقع:</strong> <a href="{{ pub.website_url }}" target="_blank">{{ pub.website_url }}</a></li>
+                {% endif %}
+
+                {% if pub.video_url %}
+                    <li><strong>رابط الفيديو:</strong> <a href="{{ pub.video_url }}" target="_blank">{{ pub.video_url }}</a></li>
+                {% endif %}
+
+                {% if pub.page_image %}
+                    <li><strong>صورة الصفحة:</strong> 
+                        <a href="{{ pub.page_image.url }}" target="_blank">
+                            {{ pub.page_image_original_name|default:pub.page_image.name }}
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% if pub.cover_image %}
+                    <li><strong>صورة الغلاف:</strong> 
+                        <a href="{{ pub.cover_image.url }}" target="_blank">
+                            {{ pub.cover_image_original_name|default:pub.cover_image.name }}
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% if pub.notes %}
+                    <li><strong>ملاحظات:</strong> {{ pub.notes }}</li>
+                {% endif %}
+            </ul>
+        </div>
+    {% endfor %}
+{% endif %}
+
+
+
+
         <div class="mt-4 d-flex gap-2">
-            <a href="{% url model_name|add:'-update' pk=item.pk %}" class="btn btn-warning">تعديل</a>
-            <a href="{% url model_name|add:'-delete' pk=item.pk %}" class="btn btn-danger">حذف</a>
+             {% if model_name and item.pk %}
+                <a href="{% url model_name|add:'-update' pk=item.pk %}" class="btn btn-warning">تعديل</a>
+                <a href="{% url model_name|add:'-delete' pk=item.pk %}" class="btn btn-danger">حذف</a>
+             {% endif %}
         </div>
     </div>
 </div>
 
 <style>
+/*  إضافة ستايل بسيط لتحسين مظهر التفاصيل المدمجة  */
+.nested-details {
+    padding-left: 20px;
+    font-size: 0.95em;
+    border-left: 3px solid #eee;
+}
+.nested-details li {
+    line-height: 1.6;
+}
+.nested-details strong {
+    font-weight: 600;
+    color: #333;
+}
+/* ... (كود CSS المتبقي) ... */
 .page-title {
     font-size: 2rem;
     font-weight: 700;

@@ -82,11 +82,70 @@
                     </tr>
                     {% endfor %}
                 </tbody>
-            </table>
-            
-            
+            </table>         
             {% endif %}
             <hr>
+
+            {% if publication_formset %}
+<hr class="my-5">
+
+<h3 class="mb-3 text-warning"> أماكن النشر </h3>
+
+<div class="alert alert-warning">
+    يمكنك تعديل أو حذف أماكن النشر المرتبطة بـ {{ model_name_singular }}.
+</div>
+
+{{ publication_formset.management_form }}
+
+<table class="table table-bordered table-sm table-striped">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>المنصة</th>
+            <th>تاريخ النشر</th>
+            <th>بيانات إضافية</th>
+            <th>ملاحظات</th>
+            <th>حذف</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for pub_form in publication_formset %}
+        <tr>
+            <td>{{ pub_form.id }}</td>
+
+            <td>
+                {{ pub_form.platform }}
+            </td>
+
+            <td>
+                {{ pub_form.publish_date }}
+            </td>
+
+            <td>
+                {% for field in pub_form %}
+                    {% if field.name != "platform" and field.name != "publish_date" and field.name != "notes" and field.name != "DELETE" and field.name != "id" %}
+                        <div class="mb-1">
+                            <label class="small fw-bold">{{ field.label }}</label>
+                            {{ field }}
+                        </div>
+                    {% endif %}
+
+                {% endfor %}
+            </td>
+
+            <td>
+                {{ pub_form.notes }}
+            </td>
+
+            <td>
+                {{ pub_form.DELETE }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
             <div class="d-flex justify-content-start gap-2">
                 <button type="submit" class="btn btn-primary">
                     حفظ التغييرات

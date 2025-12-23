@@ -6,5 +6,5 @@ class ArchivesConfig(AppConfig):
     name = 'archives'
     
     def ready(self):
-        # 🚨 هذا هو السطر الذي يربط ملف signals.py عند بدء تشغيل Django 🚨
+        #  هذا هو السطر الذي يربط ملف signals.py عند بدء تشغيل Django 
         import archives.signals

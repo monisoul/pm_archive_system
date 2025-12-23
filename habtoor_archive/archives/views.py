@@ -4,13 +4,13 @@ from django.contrib.auth .decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from .models import *
-from .forms import AuthorityForm , ArticleForm , CareerStageForm , ArticleTypeForm , AttachmentFormSet , LoginForm , AttachmentForm
+from .forms import AuthorityForm , ArticleForm , CareerStageForm , ArticleTypeForm , AttachmentFormSet ,PublicationPlatformForm,PublicationFormSet, LoginForm , AttachmentForm , CategoryForm , AuthorityTypeForm , GeographicalLocationForm , PublicationPlatformTypeForm
 from django.core.paginator import Paginator
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView , DetailView
 from django.contrib.contenttypes.models import ContentType
 from django.views.generic import DetailView
-from django.db.models import ForeignKey, TextField
+from django.db.models import ForeignKey, TextField , DateTimeField
 
 
 # Create your views here.
@@ -60,6 +60,7 @@ class BaseListView(ListView):
     #success_url = None  # سيتم تحديدها في subclasses
     paginate_by = 10
     filter_fields = ['name_ar']
+    excluded_list_fields = ['name_en' , 'title_en', 'language' , 'is_archived' , 'keywords']
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -96,6 +97,11 @@ class BaseListView(ListView):
             
             display_fields = []
             for field in self.model._meta.fields:
+                
+                # تطبيق شرط الاستثناء
+                if field.name in self.excluded_list_fields:
+                    continue
+                
                 display_fields.append(field)
             
             context['model_fields'] = display_fields
@@ -177,153 +183,200 @@ class BaseDeleteView(DeleteView):
         return super().form_valid(form)
     
 class GenericAttachmentMixin:
-    """
-    Mixin لإضافة منطق التعامل مع المرفقات العامة (Generic Formset)
-    """
-    attachment_formset_class = None  # سيتم تعيينه في الـ Views التي ترث منه
+    attachment_formset_class = None
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        instance = self.object if hasattr(self, 'object') else None
 
-        if self.attachment_formset_class and 'attachment_formset' not in context:
-            instance = self.object if hasattr(self, 'object') else None
-
+        if self.attachment_formset_class:
             context['attachment_formset'] = self.attachment_formset_class(
-                self.request.POST or None,
-                self.request.FILES or None,
+                self.request.POST if self.request.method == "POST" else None,
+                self.request.FILES if self.request.method == "POST" else None,
                 instance=instance,
                 prefix='attachments'
             )
         return context
 
+
+    
+
+class GenericPublicationMixin:
+    publication_formset_class = None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        instance = self.object if hasattr(self, 'object') else None
+
+        if self.publication_formset_class:
+            if self.request.method == "POST":
+                context['publication_formset'] = self.publication_formset_class(
+                    self.request.POST,
+                    self.request.FILES,   # ✅ هذا هو السطر الحاسم
+                    instance=instance,
+                    prefix='publications'
+                )
+            else:
+                context['publication_formset'] = self.publication_formset_class(
+                    instance=instance,
+                    prefix='publications'
+                )
+
+        return context
+
+
+
+
+
+class GenericRelatedSaveMixin:
+
     def form_valid(self, form):
         context = self.get_context_data()
-        attachment_formset = context['attachment_formset']
+        attachment_formset = context.get('attachment_formset')
+        publication_formset = context.get('publication_formset')
 
-        try:
-            with transaction.atomic():
+        with transaction.atomic():
+            # إنشاء المقالة بدون حفظ مباشر
+            self.object = form.save(commit=False)
 
-                # 1) حفظ النموذج الأساسي
-                self.object = form.save()
+            # تعيين المستخدم الحالي كمُنشئ المقالة
+            self.object.created_by = self.request.user
 
-                # 2) حفظ المرفقات
+            # حفظ المقالة بعد تعيين created_by
+            self.object.save()
+
+            # حفظ الفورم سيت إذا موجود
+            if attachment_formset:
+                attachment_formset.instance = self.object
                 if attachment_formset.is_valid():
-                    attachment_formset.instance = self.object
-
-                    for attachment_form in attachment_formset.forms:
-                        if attachment_form.has_changed() or attachment_form.cleaned_data.get('DELETE'):
-                            
-                            #  المنطق الصحيح: لا تعين original_name إلا إذا تم رفع ملف 
-                            if attachment_form.cleaned_data.get('file'):
-                                # إذا كان هناك ملف جديد مرفوع: نستخدم اسمه الجديد
-                                attachment_form.instance.original_name = attachment_form.cleaned_data['file'].name
-                            
-                            # ⚠️ ملاحظة مهمة: 
-                            # إذا لم يكن هناك ملف جديد مرفوع (أي: قمت بتعديل حقل can_be_shared فقط)،
-                            # فإن original_name سيحتفظ بقيمته القديمة المخزنة في attachment_form.instance
-                            # (أي القيمة المحملة من قاعدة البيانات)، ولن يتم تغييرها في هذه الخطوة.
-                            
-                            # تعيين created_by للمستخدم الحالي في المرفقات الجديدة فقط
-                            if attachment_form.instance.pk is None and attachment_form.cleaned_data.get('file'):
-                                attachment_form.instance.created_by = self.request.user
-
+                    # تعيين created_by لكل مرفق قبل الحفظ
+                    for attachment_form in attachment_formset:
+                        if attachment_form.instance.pk is None:  # فقط العناصر الجديدة
+                            attachment_form.instance.created_by = self.request.user
                     attachment_formset.save()
 
-                else:
-                    # عرض الأخطاء الحقيقية للـ formset
-                    for form_err in attachment_formset.forms:
-                        for field, errors in form_err.errors.items():
-                            for error in errors:
-                                messages.error(self.request, f"[Attachment] {field}: {error}")
+            if publication_formset:
+                publication_formset.instance = self.object
+                if publication_formset.is_valid():
+                    # تعيين created_by لكل ببلكشن قبل الحفظ
+                    for publication_form in publication_formset:
+                        if publication_form.instance.pk is None:  # فقط العناصر الجديدة
+                            publication_form.instance.created_by = self.request.user
+                    publication_formset.save()
 
-                    return self.form_invalid(form)
-
-                messages.success(self.request, f'تم حفظ {self.model._meta.verbose_name} بنجاح.')
-                return redirect(self.get_success_url())
-
-        except Exception as e:
-            # عرض استثناء النظام الحقيقي
-            messages.error(self.request, f"System Error: {str(e)}")
-            return self.form_invalid(form)
-
-    def form_invalid(self, form):
-        # عرض الأخطاء الحقيقية للـ Form الأساسي
-        for field, errors in form.errors.items():
-            for error in errors:
-                messages.error(self.request, f"[Main Form] {field}: {error}")
-
-        return self.render_to_response(self.get_context_data(form=form))
-
+        return super().form_valid(form)
 
 class BaseDetailView(DetailView):
     """
     كلاس أساسي عام (Generic) لعرض تفاصيل أي كائن موديل.
-    يقوم بجمع بيانات الحقول وتنسيقها بشكل آمن لتمريرها إلى القالب.
+    يعرض:
+    - الحقول العادية كما هي
+    - العلاقات (FK) بالاسم فقط
+    - علاقات المستوى الثاني حسب تعريف الموديل (DETAIL_RELATIONS)
     """
-    template_name = 'generic/detail.html' # اسم القالب الموحد
-    context_object_name = 'item' 
-    
+    template_name = 'generic/detail.html'
+    context_object_name = 'item'
+
+    # --------------------------------------------------
+    # 1) جلب خريطة العلاقات من الموديل إن وجدت
+    # --------------------------------------------------
+    def get_detail_relations(self, model):
+        """
+        مثال داخل الموديل:
+        DETAIL_RELATIONS = {
+            'Authority': ['type', 'location']
+        }
+        """
+        return getattr(model, 'DETAIL_RELATIONS', {})
+
+    # --------------------------------------------------
+    # 2) عرض اسم علاقة مباشرة (FK)
+    # --------------------------------------------------
+    def render_fk_name(self, obj, field_name):
+        related = getattr(obj, field_name, None)
+        return str(related) if related else "—"
+
+    # --------------------------------------------------
+    # 3) عرض علاقات المستوى الثاني (اسم فقط)
+    # --------------------------------------------------
+    def render_nested_relations(self, obj, parent_field):
+        results = []
+
+        relations_map = self.get_detail_relations(obj.__class__)
+        nested_fields = relations_map.get(parent_field, [])
+
+        parent_obj = getattr(obj, parent_field, None)
+        if not parent_obj:
+            return results
+
+        for nested_field in nested_fields:
+            nested_obj = getattr(parent_obj, nested_field, None)
+            if nested_obj:
+                field = parent_obj._meta.get_field(nested_field)
+                results.append({
+                    'label': field.verbose_name,
+                    'value': str(nested_obj)
+                })
+
+        return results
+
+    # --------------------------------------------------
+    # 4) بناء بيانات العرض النهائية
+    # --------------------------------------------------
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        current_object = self.object # الكائن (الموديل) الذي يتم عرضه
-        
-        if self.model and current_object:
-            # تمرير أسماء الموديل للقالب (للاستخدام في العناوين والروابط)
-            context['model_name'] = self.model._meta.model_name
-            context['model_name_singular'] = self.model._meta.verbose_name
-            
-            # 🚨🚨 تجهيز بيانات الحقول (fields_data) 🚨🚨
-            fields_data = []
-            
-            # المرور على جميع حقول الموديل
-            for field in self.model._meta.fields:
-                
-                # تجاهل الحقول الداخلية وعلاقات Generic (إذا كانت غير مطلوبة للعرض التفصيلي)
-                if field.name in ['id', 'content_type', 'object_id']:
-                    continue
+        current_object = self.object
 
-                # 💡 الحل لخطأ NameError: تهيئة المتغير قبل أي محاولة استخدام
-                display_value = "—" # القيمة الافتراضية في حالة الفشل أو عدم وجود بيانات
-                
-                # محاولة الحصول على القيمة
-                try:
-                    value = getattr(current_object, field.name)
-                    display_value = value
-                    
-                    # 1. معالجة حقول العلاقات (ForeignKey)
-                    if field.is_relation and value is not None:
-                        # عرض القيمة النصية للكائن المرتبط (باستخدام __str__)
-                        display_value = str(value)
-                    
-                    # 2. معالجة الحقول النصية الكبيرة (TextField) للاقتصاص
-                    elif isinstance(field, TextField) and display_value:
-                        # اقتصاص النص الطويل للعرض
-                        display_value = str(display_value) # التأكد من أنه نص
-                        display_value = display_value[:200] + ('...' if len(display_value) > 200 else '')
-                    
-                    # 3. معالجة القيم الفارغة أو الخاطئة
-                    elif display_value is None or display_value is False or display_value == "":
-                         display_value = "—"
-                         
-                    # 4. معالجة حقول التاريخ والوقت (إذا لزم الأمر تنسيق محدد)
-                    # يمكنك إضافة منطق لتنسيق التاريخ هنا:
-                    # elif field.get_internal_type() in ('DateField', 'DateTimeField') and display_value:
-                    #     display_value = display_value.strftime("%Y-%m-%d")
-                        
-                except AttributeError:
-                    # في حالة فشل جلب الحقل بالاسم المحدد
-                    display_value = "— (خطأ في الحقل)" 
+        # لتجنب NoReverseMatch
+        context['model_name'] = self.model._meta.model_name if self.model else ''
+        context['model_name_singular'] = self.model._meta.verbose_name
 
-                # إضافة بيانات الحقل إلى القائمة fields_data
+        fields_data = []
+
+        for field in self.model._meta.fields:
+
+            # استثناء الحقول الإدارية
+            if field.name in ['id', 'created_at', 'updated_at', 'content_type', 'object_id']:
+                continue
+
+            # ---------- ForeignKey ----------
+            if isinstance(field, models.ForeignKey):
+                # العلاقة الأساسية
                 fields_data.append({
                     'label': field.verbose_name,
-                    'value': display_value
+                    'value': self.render_fk_name(current_object, field.name)
                 })
-                
-            context['fields_data'] = fields_data # تمرير القائمة الآمنة والمنسقة
-            
+
+                # علاقات المستوى الثاني
+                fields_data.extend(
+                    self.render_nested_relations(current_object, field.name)
+                )
+
+            # ---------- TextField ----------
+            elif isinstance(field, TextField):
+                value = getattr(current_object, field.name, None)
+                if value:
+                    value = str(value)
+                    value = value[:200] + ('...' if len(value) > 200 else value)
+                else:
+                    value = "—"
+
+                fields_data.append({
+                    'label': field.verbose_name,
+                    'value': value
+                })
+
+            # ---------- حقل عادي ----------
+            else:
+                value = getattr(current_object, field.name, None)
+                fields_data.append({
+                    'label': field.verbose_name,
+                    'value': value if value not in [None, ""] else "—"
+                })
+
+        context['fields_data'] = fields_data
         return context
+
     
 class GenericDetailMixin(BaseDetailView):
     """
@@ -341,7 +394,7 @@ class GenericDetailMixin(BaseDetailView):
         
         if current_object:
             try:
-                # 🚨 جلب المرفقات المرتبطة 🚨
+                #  جلب المرفقات المرتبطة 
                 # (يفترض وجود related_name='attachments' في GenericForeignKey في موديل Attachment)
                 related_attachments = current_object.attachments.all()
             except AttributeError:
@@ -349,6 +402,8 @@ class GenericDetailMixin(BaseDetailView):
                 related_attachments = Attachment.objects.none()
 
             context['attachments'] = related_attachments
+            context['publications'] = getattr(self.object, 'publications', []).all()
+
             
         return context
 
@@ -375,6 +430,10 @@ class ArticleTypeDeleteView(BaseDeleteView):
     model = ArticleType
     success_url = reverse_lazy('articletype-list')
     
+class ArticleTypeDetailView(BaseDetailView):
+    model = ArticleType
+    # template_name='generic/detail.html' موروث
+    
 
 # المراحل المهنية
 
@@ -400,6 +459,10 @@ class CareerStageDeleteView(BaseDeleteView):
     model = CareerStage
     success_url = reverse_lazy('careerstage-list')
     
+class CareerStageDetailView(BaseDetailView):
+    model = CareerStage
+  
+    
  
 # الجهات
 class AuthorityListView(BaseListView):
@@ -423,41 +486,51 @@ class AuthorityUpdateView(BaseUpdateView):
 class AuthorityDeleteView(BaseDeleteView):
     model = Authority
     success_url = reverse_lazy('authority-list')
+
+class AuthorityDetailView(BaseDetailView):
+    model = Authority
+  
     
     
 # المقالات مع المرفقات
-
     
 class ArticleListView(BaseListView):
     model = Article
-    # form_class = ArticleForm 
     context_object_name = 'objects_list'
-    # حقول البحث (عنوان، محتوى، محافظة، تاريخ نشر)
     filter_fields = ['title_ar', 'content', 'city__name_ar', 'publish_date'] 
     success_url = reverse_lazy('article-list')
     
-    # يجب عليك هنا تجاوز get_queryset لمعالجة البحث على حقول ForeignKey مثل city__name_ar
-    # Note: البحث عن التاريخ (publish_date) يتطلب منطق خاص بالتاريخ/النطاق.
 
 
-class ArticleCreateView(GenericAttachmentMixin, BaseCreateView):
+class ArticleCreateView(
+    LoginRequiredMixin,
+    GenericAttachmentMixin,
+    GenericPublicationMixin,
+    GenericRelatedSaveMixin,
+    BaseCreateView):
+    
     model = Article
-    form_class = ArticleForm # نفترض تعريفها
+    form_class = ArticleForm  
     attachment_formset_class = AttachmentFormSet # Formset الذي تم تعريفه في forms.py
+    publication_formset_class = PublicationFormSet
     template_name = 'generic/create_with_form.html' # قالب جديد لدمج النموذجين
     success_url = reverse_lazy('article-list')
     
-    def form_valid(self, form):
-        # يمكنك تعيين المستخدم هنا إذا كان مطلوباً
-        form.instance.created_by = self.request.user
-        # form.instance.approved_by = self.request.user # إذا كان المستخدم هو المصادق تلقائيًا
-        return super().form_valid(form)
+    
+      
+    
 
-
-class ArticleUpdateView(GenericAttachmentMixin, BaseUpdateView):
+class ArticleUpdateView(
+    LoginRequiredMixin,
+    GenericAttachmentMixin,
+    GenericPublicationMixin,
+    GenericRelatedSaveMixin,
+    BaseUpdateView
+    ):
     model = Article
     form_class = ArticleForm # نفترض تعريفها
     attachment_formset_class = AttachmentFormSet
+    publication_formset_class = PublicationFormSet
     template_name = 'generic/update_with_form.html'
     success_url = reverse_lazy('article-list')
 
@@ -466,25 +539,157 @@ class ArticleDeleteView(BaseDeleteView):
     model = Article
     success_url = reverse_lazy('article-list')
     
-
-
-class ArticleTypeDetailView(BaseDetailView):
-    model = ArticleType
-    # template_name='generic/detail.html' موروث
-
-class CareerStageDetailView(BaseDetailView):
-    model = CareerStage
-  
-    
-class AuthorityDetailView(BaseDetailView):
-    model = Authority
-  
     
 class ArticleDetailView(GenericDetailMixin):
     model = Article
     
+    
+# التصنيفات
+class CategoryListView(BaseListView):
+    model = Category
+    form_class = CategoryForm
+    context_object_name = 'objects_list'
+    #success_url = reverse_lazy('article-type-list')
+    
+class CategoryCreateView(BaseCreateView):
+    model = Category
+    form_class = CategoryForm
+    template_name = 'generic/create_with_form.html'
+    success_url = reverse_lazy('category-list')   
+    
+    
+class CategoryUpdateView(BaseUpdateView):
+    model = Category
+    form_class = CategoryForm
+    success_url = reverse_lazy('category-list')
+
+class CategoryDeleteView(BaseDeleteView):
+    model = Category
+    success_url = reverse_lazy('category-list')
+    
+class CategoryDetailView(BaseDetailView):
+    model = Category
+    
+    
+# انواع الجهات
+class AuthorityTypeListView(BaseListView):
+    model = AuthorityType
+    form_class = AuthorityTypeForm
+    context_object_name = 'objects_list'
+   
+    
+class AuthorityTypeCreateView(BaseCreateView):
+    model = AuthorityType
+    form_class = AuthorityTypeForm
+    template_name = 'generic/create_with_form.html'
+    success_url = reverse_lazy('authoritytype-list')   
+    
+    
+class AuthorityTypeUpdateView(BaseUpdateView):
+    model = AuthorityType
+    form_class = AuthorityTypeForm
+    success_url = reverse_lazy('authoritytype-list')
+
+class AuthorityTypeDeleteView(BaseDeleteView):
+    model = AuthorityType
+    success_url = reverse_lazy('authoritytype-list')
+    
+class AuthorityTypeDetailView(BaseDetailView):
+    model = AuthorityType
+    
+
+# المواقع الجغرافية
+class GeographicalLocationListView(BaseListView):
+    model = GeographicalLocation
+    form_class = GeographicalLocationForm
+    context_object_name = 'objects_list'
+   
+    
+class GeographicalLocationCreateView(BaseCreateView):
+    model = GeographicalLocation
+    form_class = GeographicalLocationForm
+    template_name = 'generic/create_with_form.html'
+    success_url = reverse_lazy('geographicallocation-list')   
+    
+    
+class GeographicalLocationUpdateView(BaseUpdateView):
+    model = GeographicalLocation
+    form_class = GeographicalLocationForm
+    success_url = reverse_lazy('ageographicallocation-list')
+
+class GeographicalLocationDeleteView(BaseDeleteView):
+    model = GeographicalLocation
+    success_url = reverse_lazy('geographicallocation-list')
+    
+class GeographicalLocationDetailView(BaseDetailView):
+    model = GeographicalLocation
+    
+    
+# انواع المنصات 
+
+class PublicationPlatformTypeListView(BaseListView):
+    model = PublicationPlatformType
+    form_class = PublicationPlatformTypeForm
+    context_object_name = 'objects_list'
+   
+    
+class PublicationPlatformTypeCreateView(BaseCreateView):
+    model = PublicationPlatformType
+    form_class = PublicationPlatformTypeForm
+    template_name = 'generic/create_with_form.html'
+    success_url = reverse_lazy('publicationplatformtype-list')   
+    
+    
+class PublicationPlatformTypeUpdateView(BaseUpdateView):
+    model = PublicationPlatformType
+    form_class = PublicationPlatformTypeForm
+    success_url = reverse_lazy('publicationplatformtype-list')
+
+class PublicationPlatformTypeDeleteView(BaseDeleteView):
+    model = PublicationPlatformType
+    success_url = reverse_lazy('publicationplatformtype-list')
+    
+class PublicationPlatformTypeDetailView(BaseDetailView):
+    model = PublicationPlatformType
+    
+    
+# المنصات
+class PublicationPlatformListView(BaseListView):
+    model = PublicationPlatform
+    form_class = PublicationPlatformForm
+    context_object_name = 'objects_list'
+   
+    
+class PublicationPlatformCreateView(BaseCreateView):
+    model = PublicationPlatform
+    form_class = PublicationPlatformForm
+    template_name = 'generic/create_with_form.html'
+    success_url = reverse_lazy('publicationplatform-list')   
+    
+    
+class PublicationPlatformUpdateView(BaseUpdateView):
+    model = PublicationPlatform
+    form_class = PublicationPlatformForm
+    success_url = reverse_lazy('publicationplatform-list')
+
+class PublicationPlatformDeleteView(BaseDeleteView):
+    model = PublicationPlatform
+    success_url = reverse_lazy('publicationplatform-list')
+    
+class PublicationPlatformDetailView(BaseDetailView):
+    model = PublicationPlatform
+
+
+    
+    
   
 
+    
+  
+
+    
+    
+    
     
     
     
