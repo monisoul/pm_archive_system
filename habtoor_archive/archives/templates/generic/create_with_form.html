@@ -1,5 +1,4 @@
 {% extends "base_dashboard.html" %}
-
 {% load static %}
 
 {% block title %}
@@ -8,101 +7,183 @@
 
 {% block content %}
 <div class="main_dashboard">
+    <div class="container mt-5">
 
-<div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="page-title mb-0">
+                إضافة {{ model_name_singular }}
+            </h1>
+            <a href="{% url model_name|add:'-list' %}" class="btn btn-secondary">
+                &larr; العودة للقائمة
+            </a>
+        </div>
 
-    
+        <div class="card p-4">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="page-title mb-0">
-            إضافة {{ model_name_singular }}
-        </h1>
-        <a href="{% url model_name|add:'-list' %}" class="btn btn-secondary">
-            &larr; العودة للقائمة
-        </a>
-    </div>
+                <!-- المعلومات الأساسية -->
+                <h3 class="mb-3 text-primary">المعلومات الاساسية</h3>
 
-    <div class="card p-4">
-        
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
+                <div class="row">
+                    {{ form.as_p }}
+                </div>
 
-            <h3 class="mb-3 text-primary">المعلومات الاساسية </h3>
-            
-            <div class="row">
-                {{ form.as_p }}
-            </div>
-            
-            <hr class="my-5">
+                <hr class="my-5">
 
-            {% if attachment_formset %}
-            <h3 class="mb-3 text-info"> مرفقات  {{ model_name_singular }}</h3>
-            
-            <div class="alert alert-info">
-                يمكنك إضافة مرفقات هنا. إذا لم تقم بإضافة ملف، سيتم تجاهل هذا الجزء عند الحفظ.
-            </div>
+                <!-- المرفقات -->
+                {% if attachment_formset %}
+                    <h3 class="mb-3 text-info">
+                        مرفقات {{ model_name_singular }}
+                    </h3>
 
-            {{ attachment_formset.management_form }}
+                    <div class="alert alert-info">
+                        يمكنك إضافة مرفقات هنا. إذا لم تقم بإضافة ملف، سيتم تجاهل هذا الجزء عند الحفظ.
+                    </div>
 
-            <table class="table table-bordered table-sm table-striped">
-                <thead>
-                    <tr>
-                        <th>File</th>
-                        <th>Is URL?</th>
-                        <th>Shareable?</th>
-                        <th>Delete</th>
-                    </tr>
-                </thead>
-                <tbody id="attachment-form-container">
-                    {% for attachment_form in attachment_formset %}
-                    <tr class="attachment-form-row">
-                        <td>
-                            {{ attachment_form.file }}
-                            {% if attachment_form.instance.pk %}
-                                <p class="text-muted small mt-1">
-                                    Current File:
-                                    <a href="{{ attachment_form.instance.file.url }}" target="_blank">
-                                        {{ attachment_form.instance.file.name|default:"File Link" }}
-                                    </a>
-                                </p>
-                            {% endif %}
-                            {% if attachment_form.file.errors %}
-                                <div class="text-danger small">{{ attachment_form.file.errors }}</div>
-                            {% endif %}
-                        </td>
-                        
-                        <td>
-                            {{ attachment_form.is_url }}
-                        </td>
-                        
-                        <td>
-                            {{ attachment_form.can_be_shared }}
-                        </td>
-                        
-                        <td>
-                            {{ attachment_form.DELETE }}
-                            {% if attachment_form.non_field_errors %}
-                                <div class="text-danger small">{{ attachment_form.non_field_errors }}</div>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            
-            {% endif %}
+                    {{ attachment_formset.management_form }}
 
-            <hr>
-            
-            <div class="d-flex justify-content-start gap-2 mt-4">
-                <button type="submit" class="btn btn-primary btn-lg">
-                    حفظ
-                </button>
-                <a href="{% url model_name|add:'-list' %}" class="btn btn-secondary btn-lg">
-                    الغاء
-                </a>
-            </div>
-        </form>
+                    <table class="table table-bordered table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>Is URL?</th>
+                                <th>Shareable?</th>
+                                <th>Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attachment-form-container">
+                            {% for attachment_form in attachment_formset %}
+                                <tr class="attachment-form-row">
+                                    <td>
+                                        {{ attachment_form.file }}
+
+                                        {% if attachment_form.instance.pk %}
+                                            <p class="text-muted small mt-1">
+                                                Current File:
+                                                <a href="{{ attachment_form.instance.file.url }}" target="_blank">
+                                                    {{ attachment_form.instance.file.name|default:"File Link" }}
+                                                </a>
+                                            </p>
+                                        {% endif %}
+
+                                        {% if attachment_form.file.errors %}
+                                            <div class="text-danger small">
+                                                {{ attachment_form.file.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {{ attachment_form.is_url }}
+                                    </td>
+
+                                    <td>
+                                        {{ attachment_form.can_be_shared }}
+                                    </td>
+
+                                    <td>
+                                        {{ attachment_form.DELETE }}
+                                        {% if attachment_form.non_field_errors %}
+                                            <div class="text-danger small">
+                                                {{ attachment_form.non_field_errors }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+
+                <!-- أماكن النشر -->
+                {% if publication_formset %}
+                    <hr class="my-5">
+
+                    <h3 class="mb-3 text-warning">أماكن النشر</h3>
+
+                    <div class="alert alert-warning">
+                        يمكنك إضافة مكان أو أكثر لنشر {{ model_name_singular }}
+                        (يوتيوب، موقع، صحيفة، كتاب...).
+                    </div>
+
+                    {{ publication_formset.management_form }}
+
+                    <table class="table table-bordered table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>منصة النشر</th>
+                                <th>تاريخ النشر</th>
+                                <th>بيانات إضافية</th>
+                                <th>ملاحظات</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pub_form in publication_formset %}
+                                <tr>
+                                    <td>
+                                        {{ pub_form.platform }}
+                                        {% if pub_form.platform.errors %}
+                                            <div class="text-danger small">
+                                                {{ pub_form.platform.errors }}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {{ pub_form.publish_date }}
+                                    </td>
+
+                                    <td>
+                                        <table class="table table-borderless mb-0 p-0">
+                                            <tbody>
+                                                {% for field in pub_form %}
+                                                    {% if field.name not in "platform publish_date notes DELETE id" %}
+                                                    <tr>
+                                                        <td style="padding: 0 8px 4px 0; font-weight: 600; white-space: nowrap;">
+                                                            {{ field.label }}:
+                                                        </td>
+                                                        <td style="padding: 0 0 4px 0;">
+                                                            {{ field }}
+                                                            {% if field.errors %}
+                                                                <div class="text-danger small">
+                                                                    {{ field.errors }}
+                                                                </div>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </td>
+
+                                    <td>
+                                        {{ pub_form.notes }}
+                                    </td>
+
+                                    <td>
+                                        {{ pub_form.DELETE }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+
+                <!-- أزرار الحفظ -->
+                <div class="d-flex justify-content-start gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        حفظ
+                    </button>
+                    <a href="{% url model_name|add:'-list' %}" class="btn btn-secondary btn-lg">
+                        الغاء
+                    </a>
+                </div>
+
+            </form>
+        </div>
     </div>
 </div>
 
@@ -124,7 +205,8 @@ form p {
     margin-bottom: 1rem;
 }
 
-.btn-primary, .btn-outline-secondary {
+.btn-primary,
+.btn-outline-secondary {
     min-width: 130px;
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
